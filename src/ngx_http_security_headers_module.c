@@ -32,7 +32,7 @@
 typedef struct {
     ngx_flag_t                 hide_server_tokens;
 
-    ngx_flag_t                 hsts;
+    ngx_flag_t                 hsts_enable;
     ngx_flag_t                 hsts_includesubdomains;
     ngx_flag_t                 hsts_preload;
     time_t                     hsts_max_age;
