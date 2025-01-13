@@ -30,16 +30,20 @@
 
 
 typedef struct {
-    ngx_flag_t                 enable;
     ngx_flag_t                 hide_server_tokens;
-    ngx_flag_t                 hsts_preload;
 
+    ngx_flag_t                 hsts;
+    ngx_flag_t                 hsts_includesubdomains;
+    ngx_flag_t                 hsts_preload;
+    time_t                     hsts_max_age;
+
+    ngx_flag_t                 enable;
     ngx_uint_t                 xss;
     ngx_uint_t                 fo;
     ngx_uint_t                 rp;
 
-    ngx_hash_t                 text_types;
-    ngx_array_t                *text_types_keys;
+    ngx_hash_t                 types;
+    ngx_array_t               *types_keys;
 
 } ngx_http_security_headers_loc_conf_t;
 
@@ -94,7 +98,7 @@ static ngx_int_t ngx_http_security_headers_init(ngx_conf_t *cf);
 static ngx_int_t ngx_set_headers_out_by_search(ngx_http_request_t *r,
     ngx_str_t *key, ngx_str_t *value);
 
-ngx_str_t  ngx_http_security_headers_default_text_types[] = {
+ngx_str_t  ngx_http_security_headers_default_types[] = {
     ngx_string("text/html"),
     ngx_string("application/xhtml+xml"),
     ngx_string("text/xml"),
@@ -104,25 +108,46 @@ ngx_str_t  ngx_http_security_headers_default_text_types[] = {
 
 static ngx_command_t  ngx_http_security_headers_commands[] = {
 
-    { ngx_string( "security_headers" ),
+    { ngx_string("hide_server_tokens"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof( ngx_http_security_headers_loc_conf_t, enable ),
+      offsetof(ngx_http_security_headers_loc_conf_t, hide_server_tokens),
       NULL },
 
-    { ngx_string( "hide_server_tokens" ),
+    { ngx_string("hsts"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_security_headers_loc_conf_t, hide_server_tokens ),
+      offsetof(ngx_http_security_headers_loc_conf_t, hsts_enable),
       NULL },
 
-    { ngx_string( "security_headers_hsts_preload" ),
+    { ngx_string("hsts_max_age"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_sec_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_security_headers_loc_conf_t, hsts_max_age),
+      NULL },
+
+    { ngx_string("hsts_includesubdomains"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_security_headers_loc_conf_t, hsts_preload ),
+      offsetof(ngx_http_security_headers_loc_conf_t, hsts_includesubdomains),
+      NULL },
+
+    { ngx_string("hsts_preload"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_security_headers_loc_conf_t, hsts_preload),
+      NULL },
+
+    { ngx_string("security_headers"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof( ngx_http_security_headers_loc_conf_t, enable),
       NULL },
 
     { ngx_string("security_headers_xss"),
@@ -146,12 +171,12 @@ static ngx_command_t  ngx_http_security_headers_commands[] = {
       offsetof(ngx_http_security_headers_loc_conf_t, rp),
       ngx_http_referrer_policy },
 
-    { ngx_string("security_headers_text_types"),
+    { ngx_string("security_headers_types"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
       ngx_http_types_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_security_headers_loc_conf_t, text_types_keys),
-      &ngx_http_security_headers_default_text_types[0] },
+      offsetof(ngx_http_security_headers_loc_conf_t, types_keys),
+      &ngx_http_security_headers_default_types[0] },
 
       ngx_null_command
 };
@@ -207,44 +232,80 @@ ngx_http_security_headers_filter(ngx_http_request_t *r)
     ngx_str_t  scheme          = ngx_string("scheme");
     ngx_uint_t scheme_hash_key = ngx_hash_key(scheme.data, scheme.len);
     ngx_http_variable_value_t *scheme_value;
+    u_char     buf[128];
+    u_char     *p;
 
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_security_headers_module);
 
-    if (1 == slcf->hide_server_tokens) {
-        /* Hide the Server header */
-        h_server = r->headers_out.server;
+    if (1 != slcf->hide_server_tokens) {
+        goto add_hsts;
+    }
+
+    /* Hide the Server header */
+    h_server = r->headers_out.server;
+    if (h_server == NULL) {
+        h_server = ngx_list_push(&r->headers_out.headers);
         if (h_server == NULL) {
-            h_server = ngx_list_push(&r->headers_out.headers);
-            if (h_server == NULL) {
-                return NGX_ERROR;
-            }
-            ngx_str_set(&h_server->key, "Server");
-            ngx_str_set(&h_server->value, "");
-            r->headers_out.server = h_server;
+            return NGX_ERROR;
         }
-        h_server->hash = 0;
+        ngx_str_set(&h_server->key, "Server");
+        ngx_str_set(&h_server->value, "");
+        r->headers_out.server = h_server;
+    }
+    h_server->hash = 0;
 
-        /* Hide X-Powered-By header */
-        ngx_str_set(&key, "x-powered-by");
-        ngx_str_set(&val, "");
-        ngx_set_headers_out_by_search(r, &key, &val);
+    /* Hide X-Powered-By header */
+    ngx_str_set(&key, "x-powered-by");
+    ngx_str_set(&val, "");
+    ngx_set_headers_out_by_search(r, &key, &val);
 
-        /* Hide X-Page-Speed header */
-        ngx_str_set(&key, "x-page-speed");
-        ngx_str_set(&val, "");
-        ngx_set_headers_out_by_search(r, &key, &val);
+    /* Hide X-Page-Speed header */
+    ngx_str_set(&key, "x-page-speed");
+    ngx_str_set(&val, "");
+    ngx_set_headers_out_by_search(r, &key, &val);
 
-        /* Hide X-Varnish */
-        ngx_str_set(&key, "x-varnish");
-        ngx_str_set(&val, "");
-        ngx_set_headers_out_by_search(r, &key, &val);
+    /* Hide X-Varnish */
+    ngx_str_set(&key, "x-varnish");
+    ngx_str_set(&val, "");
+    ngx_set_headers_out_by_search(r, &key, &val);
 
-        /* Hide X-Application-Version */
-        ngx_str_set(&key, "x-application-version");
-        ngx_str_set(&val, "");
+    /* Hide X-Application-Version */
+    ngx_str_set(&key, "x-application-version");
+    ngx_str_set(&val, "");
+    ngx_set_headers_out_by_search(r, &key, &val);
+
+
+add_hsts:
+
+    if (1 != slcf->hsts_enable) {
+        goto add_security_headers;
+    }
+
+    scheme_value = ngx_http_get_variable(r, &scheme, scheme_hash_key);
+    if (scheme_value && !scheme_value->not_found && scheme_value->len == 5 && ngx_strncmp(scheme_value->data, "https", 5) == 0)
+    {
+        ngx_str_set(&key, "Strict-Transport-Security");
+
+        p = buf;
+        p = ngx_snprintf(p, buf + sizeof(buf) - p, "max-age=%T", slcf->hsts_max_age);
+
+        if (slcf->hsts_includesubdomains == 1) {
+            p = ngx_snprintf(p, buf + sizeof(buf) - p, "; includeSubDomains");
+        }
+
+        if (slcf->hsts_preload == 1) {
+            p = ngx_snprintf(p, buf + sizeof(buf) - p, "; preload");
+        }
+
+        val.data = buf;
+        val.len = p - buf;
         ngx_set_headers_out_by_search(r, &key, &val);
     }
 
+
+add_security_headers:
+
+    /* add security headers other than hsts */
     if (1 != slcf->enable) {
         return ngx_http_next_header_filter(r);
     }
@@ -260,7 +321,7 @@ ngx_http_security_headers_filter(ngx_http_request_t *r)
     /* Add X-XSS-Protection */
     if (r->headers_out.status != NGX_HTTP_NOT_MODIFIED
         && NGX_HTTP_SECURITY_HEADER_OMIT != slcf->xss
-        && ngx_http_test_content_type(r, &slcf->text_types) != NULL)
+        && ngx_http_test_content_type(r, &slcf->types) != NULL)
     {
         ngx_str_set(&key, "X-XSS-Protection");
         if (NGX_HTTP_XSS_HEADER_ON == slcf->xss) {
@@ -273,22 +334,10 @@ ngx_http_security_headers_filter(ngx_http_request_t *r)
         ngx_set_headers_out_by_search(r, &key, &val);
     }
 
-    scheme_value = ngx_http_get_variable(r, &scheme, scheme_hash_key);
-    if (scheme_value && !scheme_value->not_found && scheme_value->len == 5 && ngx_strncmp(scheme_value->data, "https", 5) == 0)
-    {
-        ngx_str_set(&key, "Strict-Transport-Security");
-        if (1 == slcf->hsts_preload) {
-            ngx_str_set(&val, "max-age=31536000; includeSubDomains; preload");
-        } else {
-            ngx_str_set(&val, "max-age=31536000; includeSubDomains");
-        }
-        ngx_set_headers_out_by_search(r, &key, &val);
-    }
-
     /* Add X-Frame-Options */
     if (r->headers_out.status != NGX_HTTP_NOT_MODIFIED
         && NGX_HTTP_SECURITY_HEADER_OMIT != slcf->fo
-        && ngx_http_test_content_type(r, &slcf->text_types) != NULL)
+        && ngx_http_test_content_type(r, &slcf->types) != NULL)
     {
         ngx_str_set(&key, "X-Frame-Options");
         if (NGX_HTTP_FO_HEADER_SAME == slcf->fo) {
@@ -341,12 +390,17 @@ ngx_http_security_headers_create_loc_conf(ngx_conf_t *cf)
         return NULL;
     }
 
-    conf->xss =    NGX_CONF_UNSET_UINT;
-    conf->fo  =    NGX_CONF_UNSET_UINT;
-    conf->rp  =    NGX_CONF_UNSET_UINT;
-    conf->enable = NGX_CONF_UNSET;
     conf->hide_server_tokens = NGX_CONF_UNSET_UINT;
+
+    conf->hsts_enable = NGX_CONF_UNSET;
+    conf->hsts_max_age = NGX_CONF_UNSET;
+    conf->hsts_includesubdomains = NGX_CONF_UNSET;
     conf->hsts_preload = NGX_CONF_UNSET_UINT;
+
+    conf->enable = NGX_CONF_UNSET;
+    conf->xss = NGX_CONF_UNSET_UINT;
+    conf->fo = NGX_CONF_UNSET_UINT;
+    conf->rp = NGX_CONF_UNSET_UINT;
 
     return conf;
 }
@@ -359,13 +413,19 @@ ngx_http_security_headers_merge_loc_conf(ngx_conf_t *cf, void *parent,
     ngx_http_security_headers_loc_conf_t *prev = parent;
     ngx_http_security_headers_loc_conf_t *conf = child;
 
-    ngx_conf_merge_value(conf->enable, prev->enable, 0);
     ngx_conf_merge_value(conf->hide_server_tokens, prev->hide_server_tokens, 0);
-    ngx_conf_merge_value(conf->hsts_preload, prev->hsts_preload, 1);
 
-    if (ngx_http_merge_types(cf, &conf->text_types_keys, &conf->text_types,
-                             &prev->text_types_keys, &prev->text_types,
-                             ngx_http_security_headers_default_text_types)
+    ngx_conf_merge_value(conf->hsts_enable, prev->hsts_enable, 0);
+    ngx_conf_merge_value(conf->hsts_includesubdomains, prev->hsts_includesubdomains, 0);
+    ngx_conf_merge_value(conf->hsts_preload, prev->hsts_preload, 0);
+
+    ngx_conf_merge_sec_value(conf->hsts_max_age, prev->hsts_max_age, 31536000);
+
+    ngx_conf_merge_value(conf->enable, prev->enable, 0);
+
+    if (ngx_http_merge_types(cf, &conf->types_keys, &conf->types,
+                             &prev->types_keys, &prev->types,
+                             ngx_http_security_headers_default_types)
         != NGX_OK)
     {
         return NGX_CONF_ERROR;
