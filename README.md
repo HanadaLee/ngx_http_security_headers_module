@@ -9,6 +9,7 @@ This NGINX module adds security headers and removes insecure headers, *the right
 ```nginx
 http {
     security_headers on;
+    hsts on;
     ...
 }
 ```
@@ -26,33 +27,18 @@ Connection: keep-alive
 <b>X-Frame-Options: SAMEORIGIN
 X-Content-Type-Options: nosniff
 X-XSS-Protection: 0
-Referrer-Policy: strict-origin-when-cross-origin
-Strict-Transport-Security: max-age=31536000; includeSubDomains; preload</b>
+Referrer-Policy: same-origin
+Strict-Transport-Security: max-age=31536000</b>
 </pre>
 
 In general, the module features sending security HTTP headers in a way that better conforms to the standards.
 For instance, `Strict-Transport-Security` header should *not* be sent for plain HTTP requests.
 The module follows this recommendation.
 
-## Important note on `Strict-Transport-Security`
-
-The module adds several security headers, including `Strinct-Transport-Security`.
-Note that `preload` is sent in the value of this header, by default.
-This means Chrome may and will include your websites to its preload list of domains which are HTTPS only.
-
-It is *usually* what you want anyway, but bear in mind that in some edge cases you want to access
-a subdomain via plan unencrypted connection.
-
-If you absolutely sure that all your domains and subdomains used with the module will ever primarily operate
-on HTTPs, proceed without any extra step.
-
-If you are *not sure* if you have or will have a need to access your websites or any of its subdomains over
-plain insecure HTTP protocol, ensure `security_headers_hsts_preload off;` in your config before you ever
-start NGINX with the module to avoid having your domain preloaded by Chrome.
-
 ## Key Features
 
 *   Plug-n-Play: the default set of security headers can be enabled with `security_headers on;` in your NGINX configuration
+*   The module does not send `Strinct-Transport-Security` via `security_headers` directive. You must enable it by setting the `hsts` directive to on.
 *   Sends HTML-only security headers for relevant types only, not sending for others, e.g. `X-Frame-Options` is useless for CSS
 *   Plays well with conditional `GET` requests: the security headers are not included there unnecessarily
 *   Does not suffer the `add_header` directive's pitfalls
@@ -67,11 +53,11 @@ start NGINX with the module to avoid having your domain preloaded by Chrome.
 - **default**: `off`
 - **context**: `http`, `server`, `location`
 
-Enables or disables applying security headers. The default set includes:
+Enables or disables applying security headers (`Strict-Transport-Security` is not included). The default set includes:
 
 * `X-Frame-Options: SAMEORIGIN`
 * `X-XSS-Protection: 0`
-* `Referrer-Policy: strict-origin-when-cross-origin`
+* `Referrer-Policy: sameorigin`
 * `X-Content-Type-Options: nosniff`
 
 The values of these headers (or their inclusion) can be controlled with other `security_headers_*` directives below.
@@ -104,8 +90,8 @@ A special value `omit` disables sending a particular header by the module (usefu
 
 ### `security_headers_xss`
 
-- **syntax**: `security_headers_xss off | on | block | omit`
-- **default**: `off`
+- **syntax**: `security_headers_xss off | on | block | omit;`
+- **default**: `security_headers_xss off;`
 - **context**: `http`, `server`, `location`
 
 Controls `X-XSS-Protection` header. 
@@ -117,23 +103,68 @@ supported, it introduces vulnerabilities.
 
 ### `security_headers_frame`
 
-- **syntax**: `security_headers_frame sameorigin | deny | omit`
-- **default**: `sameorigin`
+- **syntax**: `security_headers_frame sameorigin | deny | omit;`
+- **default**: `security_headers_frame sameorigin;`
 - **context**: `http`, `server`, `location`
 
 Controls inclusion and value of `X-Frame-Options` header. 
-Special `omit` value will disable sending the header by the module. 
+Special `omit` value will disable sending the header by the module.
 
 
 ### `security_headers_referrer_policy`
 
-- **syntax**: `security_headers_referrer_policy no-referrer | no-referrer-when-downgrade | same-origin | origin 
-| strict-origin | origin-when-cross-origin | strict-origin-when-cross-origin | unsafe-url | omit`
-- **default**: `strict-origin-when-cross-origin`
+- **syntax**: `security_headers_referrer_policy no-referrer | no-referrer-when-downgrade | same-origin | origin | strict-origin | origin-when-cross-origin | strict-origin-when-cross-origin | unsafe-url | omit`
+- **default**: `security_headers_referrer_policy same-origin;`
 - **context**: `http`, `server`, `location`
 
 Controls inclusion and value of [`Referrer-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy) header. 
-Special `omit` value will disable sending the header by the module. 
+Special `omit` value will disable sending the header by the module.
+
+### `security_headers_types`
+
+- **syntax**: `security_headers_types mime-type ...;`
+- **default**: `security_headers_types text/html application/xhtml+xml text/xml text/plain;`
+- **context**: `http`, `server`, `location`
+
+Controls which mine types need to send security headers. But the `Strict-Transport-Security` header is an exception. `Strict-Transport-Security` is valid for all files.
+
+### `hsts`
+
+- **syntax**: `hsts on | off;`
+- **default**: `hsts off;`
+- **context**: `http`, `server`, `location`
+
+Enables or disables applying `Strict-Transport-Security` headers. This directive takes effect independently and is not controlled by the security_headers directive.
+
+
+### `hsts_max_age`
+
+- **syntax**: `hsts_max_age time;`
+- **default**: `hsts_max_age 31536000s;`
+- **context**: `http`, `server`, `location`
+
+Sets the value of the `max-age` parameter in the `Strict-Transport-Security` header.
+
+
+### `hsts_includesubdomains`
+
+- **syntax**: `hsts_includesubdomains on | off;`
+- **default**: `hsts_includesubdomains off;`
+- **context**: `http`, `server`, `location`
+
+Enable or disable the `includeSubDomains` parameter in the `Strict-Transport-Security` header.
+
+
+### `hsts_preload`
+
+- **syntax**: `hsts_preload on | off;`
+- **default**: `hsts_preload off;`
+- **context**: `http`, `server`, `location`
+
+Enable or disable the `preload` parameter in the `Strict-Transport-Security` header.
+This means Chrome may and will include your websites to its preload list of domains which are HTTPS only.
+It is usually what you want anyway, but bear in mind that in some edge cases you want to access a subdomain via plan unencrypted connection.
+If you absolutely sure that all your domains and subdomains used with the module will ever primarily operate on HTTPs, proceed without any extra step.
 
 ## Install
 
