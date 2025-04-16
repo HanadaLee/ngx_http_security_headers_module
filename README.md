@@ -49,8 +49,8 @@ The module follows this recommendation.
 
 ### `security_headers`
 
-- **syntax**: `security_headers on | off`
-- **default**: `off`
+- **syntax**: `security_headers on | off;`
+- **default**: `security_headers off;`
 - **context**: `http`, `server`, `location`
 
 Enables or disables applying security headers (`Strict-Transport-Security` is not included). The default set includes:
@@ -64,8 +64,8 @@ The values of these headers (or their inclusion) can be controlled with other `s
 
 ### `hide_server_tokens`
 
-- **syntax**: `hide_server_tokens on | off`
-- **default**: `off`
+- **syntax**: `hide_server_tokens on | off;`
+- **default**: `hide_server_tokens off;`
 - **context**: `http`, `server`, `location`
 
 Enables hiding headers which leak software information:
@@ -88,10 +88,10 @@ In most cases you will be just fine with `security_headers on;` and `hide_server
 For fine-tuning, use the header-specific directives below. 
 A special value `omit` disables sending a particular header by the module (useful if you want to let your backend app to send it). 
 
-### `security_headers_xss`
+### `security_headers_xss_protection`
 
-- **syntax**: `security_headers_xss off | on | block | omit;`
-- **default**: `security_headers_xss off;`
+- **syntax**: `security_headers_xss_protection off | on | block | omit;`
+- **default**: `security_headers_xss_protection off;`
 - **context**: `http`, `server`, `location`
 
 Controls `X-XSS-Protection` header. 
@@ -101,10 +101,10 @@ This is the default because
 [modern browsers do not support it](https://github.com/GetPageSpeed/ngx_security_headers/issues/19) and where it is 
 supported, it introduces vulnerabilities.
 
-### `security_headers_frame`
+### `security_headers_frame_options`
 
-- **syntax**: `security_headers_frame sameorigin | deny | omit;`
-- **default**: `security_headers_frame sameorigin;`
+- **syntax**: `security_headers_frame_options sameorigin | deny | omit;`
+- **default**: `security_headers_frame_options sameorigin;`
 - **context**: `http`, `server`, `location`
 
 Controls inclusion and value of `X-Frame-Options` header. 
@@ -113,7 +113,7 @@ Special `omit` value will disable sending the header by the module.
 
 ### `security_headers_referrer_policy`
 
-- **syntax**: `security_headers_referrer_policy no-referrer | no-referrer-when-downgrade | same-origin | origin | strict-origin | origin-when-cross-origin | strict-origin-when-cross-origin | unsafe-url | omit`
+- **syntax**: `security_headers_referrer_policy no-referrer | no-referrer-when-downgrade | same-origin | origin | strict-origin | origin-when-cross-origin | strict-origin-when-cross-origin | unsafe-url | omit;`
 - **default**: `security_headers_referrer_policy same-origin;`
 - **context**: `http`, `server`, `location`
 
