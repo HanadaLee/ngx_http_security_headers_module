@@ -1,8 +1,6 @@
-# ngx_security_headers
+# ngx_http_security_headers_module
 
-This NGINX module adds security headers and removes insecure headers, *the right way* (c). 
-
-[![Test Build](https://github.com/GetPageSpeed/ngx_security_headers/actions/workflows/build.yml/badge.svg?event=push)](https://github.com/GetPageSpeed/ngx_security_headers/actions/workflows/build.yml)
+This NGINX module adds security headers. 
 
 ## Synopsis
 
@@ -61,32 +59,6 @@ Enables or disables applying security headers (`Strict-Transport-Security` is no
 * `X-Content-Type-Options: nosniff`
 
 The values of these headers (or their inclusion) can be controlled with other `security_headers_*` directives below.
-
-### `hide_server_tokens`
-
-- **syntax**: `hide_server_tokens on | off;`
-- **default**: `hide_server_tokens off;`
-- **context**: `http`, `server`, `location`
-
-Enables hiding headers which leak software information:
-
-*   `Server`
-*   `X-Powered-By`
-*   `X-Page-Speed`
-*   `X-Varnish`
-
-It's worth noting that some of those headers bear functional use, e.g. [`X-Page-Speed` docs](https://www.modpagespeed.com/doc/configuration#XHeaderValue) mention:
-
-> ... it is used to prevent infinite loops and unnecessary rewrites when PageSpeed 
-> fetches resources from an origin that also uses PageSpeed
-
-So it's best to specify `hide_server_tokens on;` in a front-facing NGINX instances, e.g.
-the one being accessed by actual browsers, and not the ones consumed by Varnish or other software.
-
-In most cases you will be just fine with `security_headers on;` and `hide_server_tokens on;`, without any adjustments.
-
-For fine-tuning, use the header-specific directives below. 
-A special value `omit` disables sending a particular header by the module (useful if you want to let your backend app to send it). 
 
 ### `security_headers_xss_protection`
 
