@@ -108,7 +108,7 @@ referrer-policy: unsafe-url
 === TEST 6: co-exist with add header for custom referrer-policy
 --- config
     security_headers on;
-    security_headers_referrer_policy omit;
+    security_headers_referrer_policy bypass;
 
     location = /hello {
         return 200 "hello world\n";

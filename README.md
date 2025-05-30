@@ -60,37 +60,51 @@ Enables or disables applying security headers (`Strict-Transport-Security` is no
 
 The values of these headers (or their inclusion) can be controlled with other `security_headers_*` directives below.
 
-### `security_headers_xss_protection`
+### `security_headers_x_xss_protection`
 
-- **syntax**: `security_headers_xss_protection off | on | block | omit;`
-- **default**: `security_headers_xss_protection off;`
+- **syntax**: `security_headers_x_xss_protection off | on | block | clear | bypass;`
+- **default**: `security_headers_x_xss_protection off;`
 - **context**: `http`, `server`, `location`
 
 Controls `X-XSS-Protection` header. 
-Special `omit` value will disable sending the header by the module. 
 The `off` value is for disabling XSS protection: `X-XSS-Protection: 0`.
 This is the default because 
 [modern browsers do not support it](https://github.com/GetPageSpeed/ngx_security_headers/issues/19) and where it is 
 supported, it introduces vulnerabilities.
+The `on` value is for enabling XSS protection: `X-XSS-Protection: 1;`.
+The `block` value is for blocking XSS attacks: `X-XSS-Protection: 1; mode=block`.
+The `clear` value is for clearing the header.
+The `bypass` value is for disabling adding or rewriting the header by the module.
 
-### `security_headers_frame_options`
+### `security_headers_x_frame_options`
 
-- **syntax**: `security_headers_frame_options sameorigin | deny | omit;`
-- **default**: `security_headers_frame_options sameorigin;`
+- **syntax**: `security_headers_x_frame_options sameorigin | deny | clear | bypass;`
+- **default**: `security_headers_x_frame_options sameorigin;`
 - **context**: `http`, `server`, `location`
 
 Controls inclusion and value of `X-Frame-Options` header. 
-Special `omit` value will disable sending the header by the module.
+Special `bypass` value will disable adding or rewriting the header by the module.
 
 
 ### `security_headers_referrer_policy`
 
-- **syntax**: `security_headers_referrer_policy no-referrer | no-referrer-when-downgrade | same-origin | origin | strict-origin | origin-when-cross-origin | strict-origin-when-cross-origin | unsafe-url | omit;`
-- **default**: `security_headers_referrer_policy same-origin;`
+- **syntax**: `security_headers_referrer_policy strict-origin-when-cross-origin | no-referrer | no-referrer-when-downgrade | origin | origin-when-cross-origin | same-origin | strict-origin | unsafe-url | clear | bypass;`
+- **default**: `security_headers_referrer_policy strict-origin-when-cross-origin;`
 - **context**: `http`, `server`, `location`
 
 Controls inclusion and value of [`Referrer-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy) header. 
-Special `omit` value will disable sending the header by the module.
+Special `clear` value will clear the header.
+Special `bypass` value will disable adding or rewriting the header by the module.
+
+# `security_headers_x_content_type_options`
+
+- **syntax**: `security_headers_x_content_type_options nosniff | clear | bypass;`
+- **default**: `security_headers_x_content_type_options nosniff;`
+- **context**: `http`, `server`, `location`
+
+Controls inclusion and value of `X-Content-Type-Options` header.
+Special `clear` value will clear the header.
+Special `bypass` value will disable adding or rewriting the header by the module.
 
 ### `security_headers_types`
 
@@ -102,11 +116,14 @@ Controls which mine types need to send security headers. But the `Strict-Transpo
 
 ### `hsts`
 
-- **syntax**: `hsts on | off;`
-- **default**: `hsts off;`
+- **syntax**: `hsts on | bypass | clear;`
+- **default**: `hsts bypass;`
 - **context**: `http`, `server`, `location`
 
-Enables or disables applying `Strict-Transport-Security` headers. This directive takes effect independently and is not controlled by the security_headers directive.
+Controls `Strict-Transport-Security` header. This directive takes effect independently and is not controlled by the `security_headers` directive.
+The `on` value is for enabling `Strict-Transport-Security` header.
+Special `clear` value will clear the header.
+Special `bypass` value will disable adding or rewriting the header by the module.
 
 
 ### `hsts_max_age`
