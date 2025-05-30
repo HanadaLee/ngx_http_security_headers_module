@@ -118,6 +118,14 @@ static ngx_conf_enum_t  ngx_http_referrer_policy[] = {
 };
 
 
+static ngx_conf_enum_t  ngx_http_x_content_type_options[] = {
+    { ngx_string("nosniff"), NGX_HTTP_XO_HEADER_NOSNIFF },
+    { ngx_string("bypass"),  NGX_HTTP_SECURITY_HEADER_BYPASS },
+    { ngx_string("clear"),   NGX_HTTP_SECURITY_HEADER_CLEAR },
+    { ngx_null_string, 0 }
+};
+
+
 static ngx_int_t ngx_http_security_headers_filter(ngx_http_request_t *r);
 static void *ngx_http_security_headers_create_loc_conf(ngx_conf_t *cf);
 static char *ngx_http_security_headers_merge_loc_conf(ngx_conf_t *cf,
@@ -127,7 +135,7 @@ static ngx_int_t ngx_http_security_headers_set_by_search(ngx_http_request_t *r,
     ngx_str_t *key, ngx_str_t *value);
 
 
-ngx_str_t  ngx_http_security_headers_default_types[] = {
+static ngx_str_t  ngx_http_security_headers_default_types[] = {
     ngx_string("text/html"),
     ngx_string("application/xhtml+xml"),
     ngx_string("text/xml"),
@@ -201,7 +209,7 @@ static ngx_command_t  ngx_http_security_headers_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_security_headers_loc_conf_t, xo),
-      &ngx_http_xss_protection },
+      &ngx_http_x_content_type_options },
 
     { ngx_string("security_headers_types"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
