@@ -63,7 +63,7 @@ static ngx_conf_enum_t  ngx_http_hsts[] = {
 
 #endif
 
-static ngx_conf_enum_t  ngx_http_xss_protection[] = {
+static ngx_conf_enum_t  ngx_http_x_xss_protection[] = {
     { ngx_string("off"),    NGX_HTTP_XSS_HEADER_OFF },
     { ngx_string("on"),     NGX_HTTP_XSS_HEADER_ON },
     { ngx_string("block"),  NGX_HTTP_XSS_HEADER_BLOCK },
@@ -73,7 +73,7 @@ static ngx_conf_enum_t  ngx_http_xss_protection[] = {
 };
 
 
-static ngx_conf_enum_t  ngx_http_frame_options[] = {
+static ngx_conf_enum_t  ngx_http_x_frame_options[] = {
     { ngx_string("sameorigin"),  NGX_HTTP_FO_HEADER_SAME },
     { ngx_string("deny"),        NGX_HTTP_FO_HEADER_DENY },
     { ngx_string("bypass"),      NGX_HTTP_SECURITY_HEADER_BYPASS },
@@ -188,14 +188,14 @@ static ngx_command_t  ngx_http_security_headers_commands[] = {
       ngx_conf_set_enum_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_security_headers_loc_conf_t, xss),
-      &ngx_http_xss_protection },
+      &ngx_http_x_xss_protection },
 
      { ngx_string("security_headers_x_frame_options"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_enum_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_security_headers_loc_conf_t, fo),
-      &ngx_http_frame_options },
+      &ngx_http_x_frame_options },
 
     { ngx_string("security_headers_referrer_policy"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -206,7 +206,7 @@ static ngx_command_t  ngx_http_security_headers_commands[] = {
 
     { ngx_string("security_headers_x_content_type_options"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
+      ngx_conf_set_enum_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_security_headers_loc_conf_t, xo),
       &ngx_http_x_content_type_options },
