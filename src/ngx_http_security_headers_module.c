@@ -18,15 +18,14 @@
 #define NGX_HTTP_FO_HEADER_SAME                      2
 #define NGX_HTTP_FO_HEADER_DENY                      3
 
-#define NGX_HTTP_RP_HEADER_STRICT_ORIG_WHEN_CROSS    8
-
-#define NGX_HTTP_RP_HEADER_NO                        2
-#define NGX_HTTP_RP_HEADER_DOWNGRADE                 3
-#define NGX_HTTP_RP_HEADER_ORIGIN                    4
-#define NGX_HTTP_RP_HEADER_ORIGIN_WHEN_CROSS         5
-#define NGX_HTTP_RP_HEADER_SAME_ORIGIN               6
-#define NGX_HTTP_RP_HEADER_STRICT_ORIGIN             7
-#define NGX_HTTP_RP_HEADER_UNSAFE_URL                8
+#define NGX_HTTP_RP_HEADER_STRICT_ORIG_WHEN_CROSS    2
+#define NGX_HTTP_RP_HEADER_NO                        3
+#define NGX_HTTP_RP_HEADER_DOWNGRADE                 4
+#define NGX_HTTP_RP_HEADER_ORIGIN                    5
+#define NGX_HTTP_RP_HEADER_ORIGIN_WHEN_CROSS         6
+#define NGX_HTTP_RP_HEADER_SAME_ORIGIN               7
+#define NGX_HTTP_RP_HEADER_STRICT_ORIGIN             8
+#define NGX_HTTP_RP_HEADER_UNSAFE_URL                9
 
 #define NGX_HTTP_XO_HEADER_NOSNIFF                   2
 
@@ -379,6 +378,10 @@ security_headers:
 
         switch (slcf->rp) {
 
+        case NGX_HTTP_RP_HEADER_STRICT_ORIG_WHEN_CROSS:
+            ngx_str_set(&val, "strict-origin-when-cross-origin");
+            break;
+
         case NGX_HTTP_RP_HEADER_NO:
             ngx_str_set(&val, "no-referrer");
             break;
@@ -401,10 +404,6 @@ security_headers:
 
         case NGX_HTTP_RP_HEADER_STRICT_ORIGIN:
             ngx_str_set(&val, "strict-origin");
-            break;
-
-        case NGX_HTTP_RP_HEADER_STRICT_ORIG_WHEN_CROSS:
-            ngx_str_set(&val, "strict-origin-when-cross-origin");
             break;
 
         case NGX_HTTP_RP_HEADER_UNSAFE_URL:
