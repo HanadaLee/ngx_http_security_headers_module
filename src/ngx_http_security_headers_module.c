@@ -263,7 +263,6 @@ ngx_http_security_headers_filter(ngx_http_request_t *r)
 {
     ngx_http_security_headers_loc_conf_t  *slcf;
 
-    ngx_table_elt_t   *h_server;
     ngx_str_t          key;
     ngx_str_t          val;
     u_char             buf[128];
