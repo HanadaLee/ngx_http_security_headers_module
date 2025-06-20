@@ -96,7 +96,7 @@ Controls inclusion and value of [`Referrer-Policy`](https://developer.mozilla.or
 Special `clear` value will clear the header.
 Special `bypass` value will disable adding or rewriting the header by the module.
 
-# `security_headers_x_content_type_options`
+### `security_headers_x_content_type_options`
 
 - **syntax**: `security_headers_x_content_type_options nosniff | clear | bypass;`
 - **default**: `security_headers_x_content_type_options nosniff;`
