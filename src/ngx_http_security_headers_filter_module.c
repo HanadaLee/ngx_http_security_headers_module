@@ -8,6 +8,7 @@
 #include <ngx_http.h>
 #include <ngx_string.h>
 
+
 #define NGX_HTTP_SECURITY_HEADER_BYPASS              0
 #define NGX_HTTP_SECURITY_HEADER_CLEAR               1
 
@@ -222,33 +223,33 @@ static ngx_command_t  ngx_http_security_headers_commands[] = {
 };
 
 
-static ngx_http_module_t  ngx_http_security_headers_module_ctx = {
-    NULL,                                        /* preconfiguration */
-    ngx_http_security_headers_init,              /* postconfiguration */
+static ngx_http_module_t  ngx_http_security_headers_filter_module_ctx = {
+    NULL,                                         /* preconfiguration */
+    ngx_http_security_headers_init,               /* postconfiguration */
 
-    NULL,                                        /* create main configuration */
-    NULL,                                        /* init main configuration */
+    NULL,                                         /* create main configuration */
+    NULL,                                         /* init main configuration */
 
-    NULL,                                        /* create server configuration */
-    NULL,                                        /* merge server configuration */
+    NULL,                                         /* create server configuration */
+    NULL,                                         /* merge server configuration */
 
-    ngx_http_security_headers_create_loc_conf,   /* create location config */
-    ngx_http_security_headers_merge_loc_conf     /* merge location config */
+    ngx_http_security_headers_create_loc_conf,    /* create location config */
+    ngx_http_security_headers_merge_loc_conf      /* merge location config */
 };
 
 
-ngx_module_t  ngx_http_security_headers_module = {
+ngx_module_t  ngx_http_security_headers_filter_module = {
     NGX_MODULE_V1,
-    &ngx_http_security_headers_module_ctx,       /* module context */
-    ngx_http_security_headers_commands,          /* module directives */
-    NGX_HTTP_MODULE,                             /* module type */
-    NULL,                                        /* init master */
-    NULL,                                        /* init module */
-    NULL,                                        /* init process */
-    NULL,                                        /* init thread */
-    NULL,                                        /* exit thread */
-    NULL,                                        /* exit process */
-    NULL,                                        /* exit master */
+    &ngx_http_security_headers_filter_module_ctx, /* module context */
+    ngx_http_security_headers_commands,           /* module directives */
+    NGX_HTTP_MODULE,                              /* module type */
+    NULL,                                         /* init master */
+    NULL,                                         /* init module */
+    NULL,                                         /* init process */
+    NULL,                                         /* init thread */
+    NULL,                                         /* exit thread */
+    NULL,                                         /* exit process */
+    NULL,                                         /* exit master */
     NGX_MODULE_V1_PADDING
 };
 
@@ -268,7 +269,8 @@ ngx_http_security_headers_filter(ngx_http_request_t *r)
     u_char             buf[128];
     u_char            *p;
 
-    slcf = ngx_http_get_module_loc_conf(r, ngx_http_security_headers_module);
+    slcf = ngx_http_get_module_loc_conf(r,
+                                      ngx_http_security_headers_filter_module);
 
 #if (NGX_HTTP_SSL)
 
@@ -565,8 +567,8 @@ matched:
 
     /* XXX we still need to create header slot even if the value
      * is empty because some builtin headers like Last-Modified
-     * relies on this to get cleared */
-
+     * relies on this to get cleared
+     */
     h = ngx_list_push(&r->headers_out.headers);
     if (h == NULL) {
         return NGX_ERROR;
